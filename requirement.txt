@@ -4,4 +4,4 @@ google-generativeai
 pydantic
 pinecone-client
 asyncio
-firebase_client
+firebase_admin
