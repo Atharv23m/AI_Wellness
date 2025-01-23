@@ -2,7 +2,6 @@ fastapi
 uvicorn
 google-generativeai
 pydantic
-semantic-router
 pinecone-client
-tkinter
 asyncio
+firebase_client
