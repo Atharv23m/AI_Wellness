@@ -2,20 +2,15 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Dict, List
 import uvicorn
-from rag_module import rag_initialize, get_docs
-
-import google.generativeai as genai
+from firebase import FirebaseChat
+from models import GeminiClient
+import os
 
 app = FastAPI()
-# Initialize RAG components
-rag_initialize()
-
-# Configure API key
-API_KEY = ""
-genai.configure(api_key=API_KEY)
+fb = FirebaseChat()
 
 # Store chat sessions
-sessions: Dict[str, genai.GenerativeModel] = {}
+sessions: Dict[str, GeminiClient] = {}
 
 class PromptRequest(BaseModel):
     phone_no: str
@@ -28,40 +23,26 @@ class HistoryRequest(BaseModel):
 
 @app.post("/send_prompt")
 async def send_prompt(request: PromptRequest):
-    if API_KEY is None:
-        raise HTTPException(status_code=400, detail="API key not set")
-
     session_key = f"{request.phone_no}_{request.session_id}"
     
     if session_key not in sessions:
-        # Create new chat session
-        model = genai.GenerativeModel("gemini-2.0-flash-exp")
-        sessions[session_key] = model.start_chat()
-
+        sessions[session_key] = GeminiClient()
+        sessions[session_key].set_chat(fb.fetch_chats(request.phone_no, request.session_id))
+        print(sessions[session_key].chat.history)
     try:
-        response = sessions[session_key].send_message(request.prompt)
-        docs = get_docs(request.prompt, 3)
-        return {"answer": response.text, "docs": docs}
+        response = await sessions[session_key].chat_with_system(request.prompt)
+        return {"answer": response}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing prompt: {str(e)}")
 
 @app.post("/get_session_history")
 async def get_session_history(request: HistoryRequest):
-    if API_KEY is None:
-        raise HTTPException(status_code=400, detail="API key not set")
-
-    session_key = f"{request.phone_no}_{request.session_id}"
-    
-    if session_key not in sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
-
     try:
-        chat_history = []
-        for message in sessions[session_key].history:
-            chat_history.append({
-                "role": "user" if message.role == "user" else "model",
-                "text": message.parts[0].text
-            })
+        # Directly fetch chat history from Firebase
+        chat_history = fb.fetch_chats(request.phone_no, request.session_id)
+        if not chat_history:
+            raise HTTPException(status_code=404, detail="No chat history found")
+            
         return {"history": chat_history}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching history: {str(e)}")

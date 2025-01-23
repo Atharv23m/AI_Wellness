@@ -2,14 +2,17 @@ import google.generativeai as genai
 from typing import Dict, Any, List, Optional
 import json
 from prompts import ABC_chat_prompt, generate_ABC_template
+import os
 
-class GeminiService:
-    def __init__(self, api_key: str):
-        genai.configure(api_key=api_key)
+class GeminiClient:
+    def __init__(self):
+        genai.configure(api_key=os.environ.get("GEMINI_KEY"))
         self.chat_model = genai.GenerativeModel('gemini-1.5-flash')
         self.chat_abc = genai.GenerativeModel(model_name='gemini-2.0-flash-exp', system_instruction=ABC_chat_prompt)
-        self.gen_abc = genai.GenerativeModel(model_name='gemini-1.5-pro', system_instruction=generate_ABC_template)
-        self.chat = self.chat_abc.start_chat(history=[])       
+        self.gen_abc = genai.GenerativeModel(model_name='gemini-1.5-pro', system_instruction=generate_ABC_template)       
+
+    def set_chat(self, chat_history: list[dict]) -> None: 
+        self.chat = self.chat_model.start_chat(history=chat_history)
 
     async def chat_with_system(self, 
                              prompt: str, 
