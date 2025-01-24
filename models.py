@@ -1,3 +1,5 @@
+from pydantic import BaseModel
+import typing_extensions as typing
 import google.generativeai as genai
 from typing import Dict, Any, List, Optional
 import json
@@ -6,13 +8,13 @@ import os
 
 class GeminiClient:
     def __init__(self):
-        genai.configure(api_key=os.environ.get("GEMINI_KEY"))
-        self.chat_model = genai.GenerativeModel('gemini-1.5-flash')
+        genai.configure(api_key=os.getenv("GENAI_API_KEY"))
+        self.json_extract = genai.GenerativeModel('gemini-1.5-flash', system_instruction="You extract json. If fields are blank, keep them blank")
         self.chat_abc = genai.GenerativeModel(model_name='gemini-2.0-flash-exp', system_instruction=ABC_chat_prompt)
         self.gen_abc = genai.GenerativeModel(model_name='gemini-1.5-pro', system_instruction=generate_ABC_template)       
 
     def set_chat(self, chat_history: list[dict]) -> None: 
-        self.chat = self.chat_model.start_chat(history=chat_history)
+        self.chat = self.chat_abc.start_chat(history=chat_history)
 
     async def chat_with_system(self, 
                              prompt: str, 
@@ -28,12 +30,13 @@ class GeminiClient:
             print("Getting ABC")
             session_chat = get_chat_str(self.chat)
             print(session_chat)
-            response = self.gen_abc.generate_content(session_chat)
+            response = self.gen_abc.generate_content(session_chat, generation_config=genai.GenerationConfig(response_mime_type="application/json", response_schema=list[ABC]))
+            print(response.text)
             return response.text
         except Exception as e:
             return f"Error in chat: {str(e)}"
-
     
+   
         
 def get_chat_str(model: genai.ChatSession) -> str:
     chat_str = ""
@@ -43,3 +46,8 @@ def get_chat_str(model: genai.ChatSession) -> str:
         else:
             chat_str += f"Therapist: {message.parts[0].text}\n"
     return chat_str
+
+class ABC(typing.TypedDict):
+    activatingEvent: str
+    belief: str
+    consequence: str
