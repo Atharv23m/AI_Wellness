@@ -12,7 +12,7 @@ class GeminiClient:
         self.gen_abc = genai.GenerativeModel(model_name='gemini-1.5-pro', system_instruction=generate_ABC_template)       
 
     def set_chat(self, chat_history: list[dict]) -> None: 
-        self.chat = self.chat_model.start_chat(history=chat_history)
+        self.chat = self.chat_abc.start_chat(history=chat_history)
 
     async def chat_with_system(self, 
                              prompt: str, 
