@@ -22,7 +22,6 @@ class GeminiClient:
     def set_chat(self, chat_history: list[dict]) -> None: 
         self.chat = self.chat_abc.start_chat(history=chat_history)
 
-
     async def chat_with_system(self, 
                              prompt: str, 
                              temperature: float = 0.7) -> str:
