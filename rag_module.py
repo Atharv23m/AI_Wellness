@@ -1,33 +1,40 @@
-from semantic_router.encoders import HuggingFaceEncoder
+import google.generativeai as genai
 from pinecone import Pinecone, ServerlessSpec
+import os
 
 # Global variables
-encoder = None
 index = None
 
 def rag_initialize():
-    global encoder, index
+    global index
     
-    # Initialize encoder
-    encoder = HuggingFaceEncoder(name="dwzhu/e5-base-4k")
+    # Initialize Gemini
+    genai.configure(api_key=os.environ.get("GEMINI_KEY"))
 
     # Initialize Pinecone
-    pc = Pinecone(api_key='')    
+    pc = Pinecone(api_key=os.environ.get("PINECONE_KEY"))    
     
     # Setup index specification
     spec = ServerlessSpec(cloud="aws", region="us-east-1")
-    index_name = "therapist"
-    dims = 768
+    index_name = "therapist-rag"
+    dims = 768  # Make sure this matches Gemini's embedding dimension
     
     # Connect to index
     index = pc.Index(index_name)
 
-def get_docs(query: str, top_k: int) -> list[str]:
-    if encoder is None or index is None:
+async def get_docs(query: str, top_k: int) -> str:
+    if index is None:
         raise RuntimeError("Please call initialize() first")
     
-    xq = encoder([query])
+    # Get embeddings using Gemini
+    result = genai.embed_content(
+        model="models/text-embedding-004",
+        content=query
+    )
+    xq = result['embedding']
+    
     res = index.query(vector=xq, top_k=top_k, include_metadata=True)
-    docs = [x["metadata"]['context'] for x in res["matches"]]
-    print(docs)
-    return docs
+    chat_pairs = ""
+    for match in res["matches"]:
+        chat_pairs += f"User: {match['metadata']['context']}\nTherapist: {match['metadata']['response']}\n\n"  
+    return chat_pairs
