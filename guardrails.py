@@ -1,4 +1,5 @@
 import json
+import os
 from groq import Groq
 
 # Initialize Groq client - You should store this in an environment variable
