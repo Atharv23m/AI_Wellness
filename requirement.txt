@@ -5,3 +5,4 @@ pydantic
 pinecone-client
 asyncio
 firebase_admin
+groq
