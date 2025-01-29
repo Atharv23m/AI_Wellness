@@ -34,12 +34,12 @@ class GeminiClient:
         except Exception as e:
             return f"Error in chat: {str(e)}"
 
-    async def get_abc_chart(self) -> str:
+    async def end_session(self) -> str:
         try:
-            session_chat = get_chat_str(self.chat)
+            session_chat = get_chat(self.chat)
             response = self.gen_abc.generate_content(session_chat, generation_config=genai.GenerationConfig(response_mime_type="application/json", response_schema=list[ABC]))
-            response = json.loads(response.text)
-            return response
+            abc_entries = json.loads(response.text)
+            return abc_entries
         except Exception as e:
             return f"Error in chat: {str(e)}"
         
@@ -76,9 +76,24 @@ def get_chat_str(model: genai.ChatSession) -> str:
         last_messages = model.history[-2:]  # Get last 2 messages
         for message in last_messages:
             if message.role == "user":
-                chat_str += f"User: {message.parts[0].text}\n"
+                text = message.parts[0].text
+                if text.startswith('{'):
+                    text = text[text.find('}')+1:]
+                chat_str += f"User: {text}\n"
             else:
                 chat_str += f"Therapist: {message.parts[0].text}\n"
+    return chat_str
+
+def get_chat(model: genai.ChatSession) -> str:
+    chat_str = ""
+    for message in model.history:
+        if message.role == "user":
+            text = message.parts[0].text
+            if text.startswith('{'):
+                text = text[text.find('}')+1:]
+            chat_str += f"User: {text}\n"
+        else:
+            chat_str += f"Therapist: {message.parts[0].text}\n"
     return chat_str
 
 class ABC(typing.TypedDict):

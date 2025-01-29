@@ -46,6 +46,20 @@ async def get_session_history(request: HistoryRequest):
         return {"history": chat_history}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching history: {str(e)}")
+    
+@app.post("/end_session")
+async def end_session(request: HistoryRequest):
+    session_key = f"{request.phone_no}_{request.session_id}"
+
+    try:
+        
+        if session_key in sessions:     
+            chart = await sessions[session_key].end_session()    
+            print(chart)
+            fb.add_abc_chart(request.phone_no, chart)
+        return {"message": "Session ended successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error ending session: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="localhost", port=8000)
