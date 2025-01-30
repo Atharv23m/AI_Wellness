@@ -37,11 +37,32 @@ class GeminiClient:
     async def end_session(self) -> str:
         try:
             session_chat = get_chat(self.chat)
-            response = self.gen_abc.generate_content(session_chat, generation_config=genai.GenerationConfig(response_mime_type="application/json", response_schema=list[ABC]))
-            abc_entries = json.loads(response.text)
+            response = self.gen_abc.generate_content(
+                session_chat, 
+                generation_config=genai.GenerationConfig(
+                    response_mime_type="application/json",
+                    temperature=0.1,  # Lower temperature for more structured output
+                    candidate_count=1
+                )
+            )
+            # Extract the text first, then parse JSON
+            response_text = response.text
+            if not response_text:
+                return []
+                
+            # Ensure the response is valid JSON array
+            if not response_text.startswith('['):
+                response_text = f'[{response_text}]'
+                
+            abc_entries = json.loads(response_text)
             return abc_entries
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error: {e}")
+            print(f"Raw response: {response_text}")
+            return []
         except Exception as e:
-            return f"Error in chat: {str(e)}"
+            print(f"General error: {str(e)}")
+            return []
         
     async def get_brain_decision(self, mod, prompt) -> str:
         try:
